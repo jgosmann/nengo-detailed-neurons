@@ -27,43 +27,45 @@ class NrnNeuron(NeuronType):
 
 class IntFire1(_LIFBase, NeuronType):
     Cell = namedtuple('Cell', ['neuron', 'in_con', 'out_con'])
-    overshoots = {}  # FIXME should use weak references
+
+    class Cell(object):
+        __slots__ = ['neuron', 'in_con', 'out_con', 'spiketime']
+
+        def __init__(self, tau_rc, tau_ref):
+            self.neuron = neuron.h.IntFire1()
+            self.neuron.tau = _nrn_duration(tau_rc)
+            self.neuron.refrac = _nrn_duration(tau_ref)
+            self.in_con = neuron.h.NetCon(None, self.neuron)
+            self.out_con = neuron.h.NetCon(self.neuron, None)
+            self.spiketime = 0.0
 
     def create(self):
-        cell = neuron.h.IntFire1()
-        cell.tau = _nrn_duration(self.tau_rc)
-        cell.refrac = _nrn_duration(self.tau_ref)
-        in_con = neuron.h.NetCon(None, cell)
-        out_con = neuron.h.NetCon(cell, None)
-        return self.Cell(cell, in_con, out_con)
+        return self.Cell(self.tau_rc, self.tau_ref)
 
     def step_math(self, dt, J, spiked, cells, voltage):
         # 1. Add J to current c.i
         dV = (dt / self.tau_rc) * J
-        for change, j, (c, in_con, _) in zip(dV, J, cells):
-            #if c.m <= 1.0:
-            if c.m <= 1.0 and c in self.overshoots:
-                change += self.overshoots[c] * j / _nrn_duration(
-                    self.tau_rc)
-                del self.overshoots[c]
-            #in_con.weight[0] = max(change, -c.m)
-            in_con.weight[0] = change
-            in_con.event(neuron.h.t + _nrn_duration(dt) / 2.0)
+        for change, j, c in zip(dV, J, cells):
+            if c.neuron.m <= 1.0 and c.spiketime > 0.0:
+                change += c.spiketime * j / _nrn_duration(self.tau_rc)
+                c.spiketime = 0.0
+            c.in_con.weight[0] = change
+            c.in_con.event(neuron.h.t + _nrn_duration(dt) / 2.0)
         # 2. Setup recording of spikes
         spikes = [neuron.h.Vector() for c in cells]
-        for (_, _, con), s in zip(cells, spikes):
-            con.record(neuron.h.ref(s))
+        for c, s in zip(cells, spikes):
+            c.out_con.record(neuron.h.ref(s))
         # 3. Simulate for one time step
         neuron.run(neuron.h.t + _nrn_duration(dt))
         # 4. check for spikes
         spiked[:] = [s.size() > 0 for s in spikes]
-        voltage[:] = [min(max(c.M(), 0), 1) for (c, _, _) in cells]
+        voltage[:] = [min(max(c.neuron.M(), 0), 1) for c in cells]
 
-        for (c, _, _), s in zip(cells, spikes):
+        for c, s in zip(cells, spikes):
             if s.size() > 0:
-                self.overshoots[c] = neuron.h.t - s[0]
-                c.refrac = _nrn_duration(
-                    self.tau_ref + dt) - self.overshoots[c]
+                c.spiketime = neuron.h.t - s[0]
+                c.neuron.refrac = _nrn_duration(
+                    self.tau_ref + dt) - c.spiketime
 
 
 # FIXME: Deriving from _LIFBase for now to have some default implementation
