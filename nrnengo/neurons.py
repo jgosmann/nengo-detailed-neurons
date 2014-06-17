@@ -37,9 +37,9 @@ class IntFire1(_LIFBase, NeuronType):
 
     def step_math(self, dt, J, spiked, cells, voltage):
         # 1. Add J to current c.i
-        for j, (_, in_con, _) in zip(J, cells):
+        for j, (c, in_con, _) in zip(J, cells):
             dV = (dt / self.tau_rc) * j
-            in_con.weight[0] = dV
+            in_con.weight[0] = max(dV, -c.m)
             in_con.event(neuron.h.t)
         # 2. Setup recording of spikes
         spikes = [neuron.h.Vector() for c in cells]
@@ -49,7 +49,7 @@ class IntFire1(_LIFBase, NeuronType):
         neuron.run(neuron.h.t + _nrn_duration(dt))
         # 4. check for spikes
         spiked[:] = [s.size() > 0 for s in spikes]
-        voltage[:] = [c.m for (c, _, _) in cells]
+        voltage[:] = [min(c.m, 1.0) for (c, _, _) in cells]
 
 
 # FIXME: Deriving from _LIFBase for now to have some default implementation
