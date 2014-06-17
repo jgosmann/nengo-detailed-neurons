@@ -49,26 +49,11 @@ class NrnTransmitSpikes(Operator):
     def make_step(self, signals, dt):
         spikes = signals[self.spikes]
 
-        #ncs = {}
-
         def step():
-            #x = [s.i for s in self.stim[0]]
-            #print(np.min(x), np.max(x), np.mean(x))
             for i, (spike, s) in enumerate(zip(spikes, self.stim)):
                 if spike > 0:
-                    #if i == 0:
-                        #print('wtf')
                     for syn in s:
-                        #syn.event(neuron.h.t + 1000 * dt)
-                        #if syn not in ncs:
-                            #nc = neuron.h.NetCon(None, syn)
-                            #nc.weight[0] = 1.0
-                            #ncs[syn] = nc
-                        #else:
-                            #nc = ncs[syn]
-                        #nc.event(neuron.h.t)
                         syn.event(neuron.h.t)
-                        #syn.g += 30
         return step
 
 
