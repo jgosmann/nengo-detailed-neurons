@@ -8,7 +8,7 @@ from nengo.utils.compat import is_number
 import neuron
 import numpy as np
 
-from nrnengo.neurons import Compartmental, IntFire1
+from nrnengo.neurons import Bahr2, Compartmental, IntFire1
 from nrnengo.synapses import ExpSyn
 
 
@@ -134,12 +134,12 @@ class NrnBuilders(object):
         for i, cell in enumerate(self.ens_to_cells[conn.post]):
             for j, w in enumerate(weights[:, i]):
                 connections[j].append(synapse.create(
-                    cell.neuron(0.5), w / 100.0))
+                    cell.neuron.apical(0.5), w / 100.0))
 
         # 3. Add operator creating events for synapses if pre neuron fired
         model.add_op(NrnTransmitSpikes(model.sig[conn]['in'], connections))
 
     def register(self):
         Builder.register_builder(self.build_nrn_neuron, IntFire1)
-        Builder.register_builder(self.build_nrn_neuron, Compartmental)
+        Builder.register_builder(self.build_nrn_neuron, Bahr2)
         Builder.register_builder(self.build_connection, Connection)

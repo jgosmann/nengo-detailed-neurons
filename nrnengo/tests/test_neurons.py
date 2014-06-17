@@ -4,7 +4,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
-from nrnengo.neurons import Compartmental, IntFire1
+from nrnengo.neurons import Bahr2, IntFire1
 
 
 def test_int_fire1_behaves_like_nengo_lif():
@@ -31,7 +31,7 @@ def test_int_fire1_behaves_like_nengo_lif():
     assert_allclose(sim.data[B_probe], sim.data[C_probe], 0., 0.1)
 
 
-def test_compartmental():
+def test_bahr2():
     model = nengo.Network(seed=1337, label="Communications Channel")
     with model:
         sin = nengo.Node(np.sin)
@@ -39,7 +39,7 @@ def test_compartmental():
         # First ensemble is needed to convert input to spikes. Otherwise the
         # Neuron neurons cannot be connected currently.
         A = nengo.Ensemble(50, dimensions=1)
-        B = nengo.Ensemble(50, dimensions=1, neuron_type=Compartmental())
+        B = nengo.Ensemble(50, dimensions=1, neuron_type=Bahr2())
 
         nengo.Connection(sin, A)
         nengo.Connection(A, B, solver=LstsqL2(weights=True))

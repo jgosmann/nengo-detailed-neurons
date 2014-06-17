@@ -27,6 +27,10 @@ class NrnNeuron(NeuronType):
         return spikes
 
 
+class Compartmental(NrnNeuron):
+    pass
+
+
 class IntFire1(_LIFBase, NrnNeuron):
     """IntFire1 neuron model of Neuron simulator."""
 
@@ -85,24 +89,19 @@ class IntFire1(_LIFBase, NrnNeuron):
 # FIXME: Deriving from _LIFBase for now to have some default implementation
 # for bias, gain, and tuning curve calculation. Obviously, this does not match
 # the neuron implemented here.
-class Compartmental(_LIFBase, NrnNeuron):
+class Bahr2(_LIFBase, Compartmental):
     Cell = namedtuple('Cell', ['neuron', 'out_con'])
 
+    def __init__(self):
+        super(Bahr2, self).__init__()
+        # FIXME hard coded path
+        model_path = '/home/jgosmann/Documents/projects/summerschool2014/' \
+            'neuron-models/models/bahr2.hoc'
+        neuron.h.load_file(model_path)
+
     def create(self):
-        # TODO replace this with an actual, biological plausible neuron model
-        # Even better: Allow to use different Neuron neuron models.
-        cell = nrn.Section()
-        cell.nseg = 1
-        cell.diam = 18.8
-        cell.L = 18.8
-        cell.Ra = 123.0
-        cell.insert('hh')
-        cell.gnabar_hh = 0.25
-        cell.gl_hh = 0.0001666
-        cell.el_hh = -60.0
-
-        out_con = neuron.h.APCount(cell(0.5))
-
+        cell = neuron.h.Bahr2()
+        out_con = neuron.h.APCount(cell.soma(0.5))
         return self.Cell(neuron=cell, out_con=out_con)
 
     def step_math(self, dt, J, spiked, cells, voltage):
@@ -114,4 +113,4 @@ class Compartmental(_LIFBase, NrnNeuron):
 
         # 3. Check for spikes
         spiked[:] = [s.size() > 0 for s in spikes]
-        voltage[:] = [c.neuron.v for c in cells]
+        voltage[:] = [c.neuron.soma.v for c in cells]
