@@ -43,13 +43,11 @@ class IntFire1(_LIFBase, NeuronType):
         for change, j, (c, in_con, _) in zip(dV, J, cells):
             if c.m <= 1.0:
                 if c in self.overshoots:
-                    change += self.overshoots[c] * j / self.tau_rc
+                    change += self.overshoots[c] * j / _nrn_duration(
+                        self.tau_rc)
                     del self.overshoots[c]
                 in_con.weight[0] = max(change, -c.m)
                 in_con.event(neuron.h.t + _nrn_duration(dt) / 2.0)
-            overshoot = c.m + change - 1.0
-            if overshoot > 0.0:
-                self.overshoots[c] = dt * (overshoot / change)
         # 2. Setup recording of spikes
         spikes = [neuron.h.Vector() for c in cells]
         for (_, _, con), s in zip(cells, spikes):
@@ -59,6 +57,12 @@ class IntFire1(_LIFBase, NeuronType):
         # 4. check for spikes
         spiked[:] = [s.size() > 0 for s in spikes]
         voltage[:] = [min(max(c.M(), 0), 1) for (c, _, _) in cells]
+
+        for (c, _, _), s in zip(cells, spikes):
+            if s.size() > 0:
+                self.overshoots[c] = neuron.h.t - s[0]
+                c.refrac = _nrn_duration(
+                    self.tau_ref + dt) - self.overshoots[c]
 
 
 # FIXME: Deriving from _LIFBase for now to have some default implementation
