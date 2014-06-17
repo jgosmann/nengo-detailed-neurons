@@ -119,7 +119,6 @@ class NrnBuilders(object):
         # account for transform
         transform = full_transform(conn)
         targets = np.dot(targets, transform.T)
-        transform = np.array(1., dtype=np.float64)
 
         weights, solver_info = conn.solver(
             activities, targets, rng=rng,
