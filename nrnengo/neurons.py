@@ -25,7 +25,7 @@ class IntFire1(_LIFBase, NeuronType):
         out_con = neuron.h.NetCon(cell, None)
         return (cell, in_con, out_con)
 
-    def step_math(self, dt, J, spiked, cells):
+    def step_math(self, dt, J, spiked, cells, voltage):
         # 1. Add J to current c.i
         for j, (_, in_con, _) in zip(J, cells):
             dV = (dt / self.tau_rc) * j
@@ -39,6 +39,7 @@ class IntFire1(_LIFBase, NeuronType):
         neuron.run(neuron.h.t + _nrn_duration(dt))
         # 4. check for spikes
         spiked[:] = [s.size() > 0 for s in spikes]
+        voltage[:] = [c.m for (c, _, _) in cells]
 
 
 # FIXME: Deriving from _LIFBase for now to have some default implementation
