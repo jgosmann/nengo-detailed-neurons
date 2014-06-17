@@ -15,7 +15,11 @@ def _nrn_duration(t):
 
 class NrnNeuron(NeuronType):
     """Marks neurons for simulation in Neuron."""
-    pass
+
+    def create(self):
+        """Creates the required Neuron objects to simulate the neuron and
+        returns them."""
+        raise NotImplementedError()
 
 
 class IntFire1(_LIFBase, NeuronType):
