@@ -25,11 +25,15 @@ class NrnNeuron(NeuronType):
         returns them."""
         raise NotImplementedError()
 
+    def _setup_spike_recorder(self, cells):
+        spikes = [neuron.h.Vector() for c in cells]
+        for c, s in zip(cells, spikes):
+            c.out_con.record(neuron.h.ref(s))
+        return spikes
 
-class IntFire1(_LIFBase, NeuronType):
+
+class IntFire1(_LIFBase, NrnNeuron):
     """IntFire1 neuron model of Neuron simulator."""
-
-    Cell = namedtuple('Cell', ['neuron', 'in_con', 'out_con'])
 
     class Cell(object):
         """Individual IntFire1 cell."""
@@ -67,9 +71,7 @@ class IntFire1(_LIFBase, NeuronType):
             c.in_con.event(neuron.h.t + _nrn_duration(dt) / 2.0)
 
         # 3. Setup recording of spikes
-        spikes = [neuron.h.Vector() for c in cells]
-        for c, s in zip(cells, spikes):
-            c.out_con.record(neuron.h.ref(s))
+        spikes = self._setup_spike_recorder(cells)
 
         # 4. Simulate for one time step
         neuron.run(neuron.h.t + _nrn_duration(dt))
@@ -88,7 +90,9 @@ class IntFire1(_LIFBase, NeuronType):
 # FIXME: Deriving from _LIFBase for now to have some default implementation
 # for bias, gain, and tuning curve calculation. Obviously, this does not match
 # the neuron implemented here.
-class Compartmental(_LIFBase, NeuronType):
+class Compartmental(_LIFBase, NrnNeuron):
+    Cell = namedtuple('Cell', ['neuron', 'out_con'])
+
     def create(self):
         # TODO replace this with an actual, biological plausible neuron model
         # Even better: Allow to use different Neuron neuron models.
@@ -104,15 +108,15 @@ class Compartmental(_LIFBase, NeuronType):
 
         out_con = neuron.h.APCount(cell(0.5))
 
-        return (cell, out_con)
+        return self.Cell(neuron=cell, out_con=out_con)
 
     def step_math(self, dt, J, spiked, cells, voltage):
         # 1. Setup recording of spikes
-        spikes = [neuron.h.Vector() for c in cells]
-        for (_, out_con), s in zip(cells, spikes):
-            out_con.record(neuron.h.ref(s))
+        spikes = self._setup_spike_recorder(cells)
+
         # 2. Simulate for one time step
-        neuron.run(neuron.h.t + dt * 1000)
-        # 3. check for spikes
+        neuron.run(neuron.h.t + _nrn_duration(dt))
+
+        # 3. Check for spikes
         spiked[:] = [s.size() > 0 for s in spikes]
-        voltage[:] = [c.v for (c, _) in cells]
+        voltage[:] = [c.neuron.v for c in cells]
