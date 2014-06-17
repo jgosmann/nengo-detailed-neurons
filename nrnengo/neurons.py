@@ -6,6 +6,7 @@ from weakref import WeakKeyDictionary
 # FIXME using non-public Nengo API
 from nengo.neurons import _LIFBase, NeuronType
 import neuron
+import numpy as np
 import nrn
 
 
@@ -26,9 +27,13 @@ class NrnNeuron(NeuronType):
 
 
 class IntFire1(_LIFBase, NeuronType):
+    """IntFire1 neuron model of Neuron simulator."""
+
     Cell = namedtuple('Cell', ['neuron', 'in_con', 'out_con'])
 
     class Cell(object):
+        """Individual IntFire1 cell."""
+
         __slots__ = ['neuron', 'in_con', 'out_con', 'spiketime']
 
         def __init__(self, tau_rc, tau_ref):
@@ -39,33 +44,45 @@ class IntFire1(_LIFBase, NeuronType):
             self.out_con = neuron.h.NetCon(self.neuron, None)
             self.spiketime = 0.0
 
+        @property
+        def refractory(self):
+            return self.neuron.m > 1.0
+
     def create(self):
         return self.Cell(self.tau_rc, self.tau_ref)
 
     def step_math(self, dt, J, spiked, cells, voltage):
-        # 1. Add J to current c.i
+        # 1. Determine voltage changes
         dV = (dt / self.tau_rc) * J
-        for change, j, c in zip(dV, J, cells):
-            if c.neuron.m <= 1.0 and c.spiketime > 0.0:
-                change += c.spiketime * j / _nrn_duration(self.tau_rc)
+
+        spiketimes = np.array(
+            [c.spiketime if not c.refractory else 0.0 for c in cells])
+        dV += spiketimes * J / _nrn_duration(self.tau_rc)
+
+        # 2. Apply voltage changes
+        for c, w in zip(cells, dV):
+            if not c.refractory:
                 c.spiketime = 0.0
-            c.in_con.weight[0] = change
+            c.in_con.weight[0] = w
             c.in_con.event(neuron.h.t + _nrn_duration(dt) / 2.0)
-        # 2. Setup recording of spikes
+
+        # 3. Setup recording of spikes
         spikes = [neuron.h.Vector() for c in cells]
         for c, s in zip(cells, spikes):
             c.out_con.record(neuron.h.ref(s))
-        # 3. Simulate for one time step
-        neuron.run(neuron.h.t + _nrn_duration(dt))
-        # 4. check for spikes
-        spiked[:] = [s.size() > 0 for s in spikes]
-        voltage[:] = [min(max(c.neuron.M(), 0), 1) for c in cells]
 
-        for c, s in zip(cells, spikes):
-            if s.size() > 0:
-                c.spiketime = neuron.h.t - s[0]
-                c.neuron.refrac = _nrn_duration(
-                    self.tau_ref + dt) - c.spiketime
+        # 4. Simulate for one time step
+        neuron.run(neuron.h.t + _nrn_duration(dt))
+
+        # 5. Check for spikes and record voltages
+        spiked[:] = [s.size() > 0 for s in spikes]
+        voltage[:] = [np.clip(c.neuron.M(), 0, 1) for c in cells]
+
+        # 6. Record spike times
+        for idx in np.where(spiked)[0]:
+            cells[idx].spiketime = neuron.h.t - spikes[idx][0]
+            cells[idx].neuron.refrac = _nrn_duration(
+                self.tau_ref + dt) - cells[idx].spiketime
 
 
 # FIXME: Deriving from _LIFBase for now to have some default implementation
