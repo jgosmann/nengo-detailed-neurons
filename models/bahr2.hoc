@@ -1,0 +1,261 @@
+nrn_load_dll("../BahlEtAl2012/channels/x86_64/.libs/libnrnmech.so")
+
+begintemplate Bahr2
+
+    objref nat_list
+    objref kfast_list
+    objref kslow_list
+    objref ih_list
+
+    objref axon_list, axosomatic_list, apicaltree_list, apicalshaftoblique_list, tuft_list, soma_list, basal_list
+
+    public soma, basal, apical, tuft, hillock, iseg, axon
+    create soma
+    create basal
+    create apical
+    create tuft
+    create hillock
+    create iseg
+    create axon
+
+
+    proc init() {
+        celsius = 37
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // The Geometry will fulfill these area conditions
+        // Surface areas were calculated from a detailed reconstruction from a Pyramidal Neuron
+
+        soma_area = 1682.96028429
+        basal_area = 7060.90626796
+        apicalshaftoblique_area = 9312.38528764
+        tuft_area = 9434.24861189
+
+        PI  = 3.1415926535897932384
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // Create the Segments and connect them properly and set the number of compartments per Segment
+        connect basal(0), soma(0.5)
+        connect apical(0), soma(1)
+        connect tuft(0), apical(1)
+        connect hillock(0), soma(0)
+        connect iseg(0), hillock(1)
+        connect axon(0), iseg(1)
+
+        soma			nseg = 1
+        basal			nseg = 1
+        apical			nseg = 5
+        tuft			nseg = 2
+        hillock			nseg = 5
+        iseg			nseg = 5
+        axon			nseg = 1
+
+
+        /// reduced geometry
+        axon_list 				= new SectionList()
+        axosomatic_list 		= new SectionList()
+        apicalshaftoblique_list = new SectionList()
+        apicaltree_list 		= new SectionList()
+        tuft_list 				= new SectionList()
+        soma_list 				= new SectionList()
+        basal_list 				= new SectionList()
+
+        hillock			axon_list.append()
+        iseg			axon_list.append()
+        axon			axon_list.append()
+
+        soma			axosomatic_list.append()
+        basal			axosomatic_list.append()
+        hillock			axosomatic_list.append()
+        iseg			axosomatic_list.append()
+        axon			axosomatic_list.append()
+
+        apical 			apicalshaftoblique_list.append()
+        apical			apicaltree_list.append()
+        tuft			apicaltree_list.append()
+
+        tuft 			tuft_list.append() 
+
+        soma			soma_list.append()
+
+        basal			basal_list.append()
+
+        // As we do not have oblique dendrites in the reduced model this is the same (important for area calculation)
+
+        ///////////////////////////////////////////////////////////
+        // Set the Parameters that were Found by the Geometry Optimization Algorithm
+
+
+
+        soma Ra =  82
+
+        basal L	 = 257   
+        basal Ra = 734 
+
+        apical L = 500
+        Ra_apical = 261
+        diam_apical = apicalshaftoblique_area/PI/apical.L
+        apical Ra =  Ra_apical
+
+        tuft L = 499
+        tuft Ra = 527
+
+        recalculate_geometry()
+
+        ////////////////////////////////////////////////
+        // Also append an Axon
+
+        hillock { 
+            L = 20
+            diam(0:1) = 3.5:2.0
+            Ra = soma.Ra
+        }
+
+        iseg {
+            L = 25
+            diam(0:1) = 2.0:1.5
+            Ra = soma.Ra
+        }
+
+        axon { 
+            L = 500
+            diam = 1.5
+            Ra = soma.Ra
+        }
+
+
+        /////////////////////////////////////////////
+        // Define The Sections for Each Conductance
+
+        nat_list = new SectionList()
+        kslow_list = new SectionList()
+        kfast_list = new SectionList()
+        ih_list = new SectionList()
+
+        basal			ih_list.append()
+        apical			ih_list.append()
+        tuft			ih_list.append()
+
+        soma			nat_list.append()
+        hillock			nat_list.append()
+        iseg			nat_list.append()
+        apical			nat_list.append()
+        tuft 			nat_list.append()
+
+        soma			kfast_list.append()
+        apical			kfast_list.append()
+        tuft			kfast_list.append()
+
+        soma			kslow_list.append()
+        apical			kslow_list.append()
+        tuft			kslow_list.append()
+
+        //////////////////////////////////////////////////////////////////////////////////////////
+        // Insert the Channels in the Correct Section and Set the Reversal Potentials
+
+        forall {
+            insert pas
+            g_pas = 1./15000
+            e_pas = -70
+            cm = 1.0
+        }
+
+        forsec ih_list {
+            insert ih
+            ehd_ih = -47
+        }
+
+        forsec nat_list {
+            insert nat
+            ena = 55
+            vshift_nat = 10
+        }
+
+        forsec kfast_list {
+            insert kfast
+            ek = -80
+        }
+
+        forsec kslow_list {
+            insert kslow
+            ek = -80
+        }
+
+        tuft {
+            insert cad
+            insert sca
+            insert kca
+
+            eca = 140
+            ion_style("ca_ion",0,1,0,0,0)
+        }
+
+        soma insert nap
+        soma insert km
+
+        Rm_axosomatic = 15000
+        spinefactor = 2.0
+
+        decay_kfast = 50.0
+        decay_kslow = 50.0
+
+
+        // Specific setting for model 2
+        forall e_pas = -80.398657
+        Rm_axosomatic = 20587.734598
+        forsec axosomatic_list cm = 2.230408
+        spinefactor = 0.784797
+        soma gbar_nat = 236.616175
+        soma gbar_kfast = 67.197508
+        soma gbar_kslow = 475.820646
+        soma gbar_nap = 1.443953
+        soma gbar_km = 10.459916
+        basal gbar_ih = 11.039583
+        tuft gbar_ih = 16.194815
+        tuft gbar_nat = 47.817841
+        decay_kfast = 20.075497
+        decay_kslow = 37.711817
+        hillock gbar_nat = 9512.289205
+        iseg gbar_nat = 13326.766938
+        iseg vshift2_nat = -10.612583
+
+
+        recalculate_passive_properties()
+        recalculate_channel_densities()
+    }
+
+    proc recalculate_passive_properties() {
+        forsec axosomatic_list g_pas = 1./Rm_axosomatic
+        forsec apicaltree_list g_pas = soma.g_pas*spinefactor 
+        
+        forsec apicaltree_list cm = soma.cm*spinefactor
+    }
+
+    proc recalculate_channel_densities() {
+        
+        // See Keren et al. 2009
+        
+        soma distance()
+        
+        forsec apicaltree_list {
+         for(x) gbar_kfast(x) = soma.gbar_kfast(0.5) * exp(-distance(x)/decay_kfast)
+         for(x) gbar_kslow(x) = soma.gbar_kslow(0.5) * exp(-distance(x)/decay_kslow)
+        }
+        
+        tuft mih = gbar_ih/distance(0)
+        tuft mnat = (gbar_nat-soma.gbar_nat(0.5))/distance(0)
+        
+        apical for(x) gbar_nat(x) = mnat*distance(x) + soma.gbar_nat(0.5)
+        apical for(x) gbar_ih(x) = mih*distance(x)
+    }
+
+    proc recalculate_geometry() {
+        soma 		diam = L =  sqrt(soma_area/PI)
+        basal 		diam = basal_area/PI/basal.L
+        
+        apical   	diam = diam_apical
+        
+        tuft 		diam = tuft_area/PI/tuft.L
+    }
+
+endtemplate Bahr2
