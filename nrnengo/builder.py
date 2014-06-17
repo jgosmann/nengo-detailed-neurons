@@ -8,7 +8,7 @@ import numpy as np
 from nrnengo.neurons import Compartmental, IntFire1
 
 
-class SimNrnNeurons(Operator):
+class SimNrnPointNeurons(Operator):
     def __init__(self, neurons, J, output, voltage):
         self.neurons = neurons
         self.J = J
@@ -34,9 +34,10 @@ class SimNrnNeurons(Operator):
 
 
 class NrnTransmitSpikes(Operator):
-    def __init__(self, spikes, stim, synapses):
+    def __init__(self, spikes, connections, synapses):
         self.spikes = spikes
-        self.stim = stim
+
+        self.connections = connections
         self.synapses = synapses
 
         self.reads = [spikes]
@@ -50,10 +51,9 @@ class NrnTransmitSpikes(Operator):
         spikes = signals[self.spikes]
 
         def step():
-            for i, (spike, s) in enumerate(zip(spikes, self.stim)):
-                if spike > 0:
-                    for syn in s:
-                        syn.event(neuron.h.t)
+            for idx in np.where(spikes)[0]:
+                for syn in self.connections[idx]:
+                    syn.event(neuron.h.t)
         return step
 
 
@@ -64,7 +64,7 @@ class NrnBuilders(object):
     def build_nrn_neuron(self, nrn, ens, model, config):
         model.sig[ens]['voltage'] = Signal(
             np.zeros(ens.n_neurons), name="%s.voltage" % ens.label)
-        op = SimNrnNeurons(
+        op = SimNrnPointNeurons(
             neurons=nrn,
             J=model.sig[ens]['neuron_in'],
             output=model.sig[ens]['neuron_out'],
