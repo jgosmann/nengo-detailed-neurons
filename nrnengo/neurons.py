@@ -1,5 +1,7 @@
 """Provides some basic Neuron neuron models."""
 
+from collections import namedtuple
+
 # FIXME using non-public Nengo API
 from nengo.neurons import _LIFBase, NeuronType
 import neuron
@@ -23,13 +25,15 @@ class NrnNeuron(NeuronType):
 
 
 class IntFire1(_LIFBase, NeuronType):
+    Cell = namedtuple('Cell', ['neuron', 'in_con', 'out_con'])
+
     def create(self):
         cell = neuron.h.IntFire1()
         cell.tau = _nrn_duration(self.tau_rc)
         cell.refrac = _nrn_duration(self.tau_ref)
         in_con = neuron.h.NetCon(None, cell)
         out_con = neuron.h.NetCon(cell, None)
-        return (cell, in_con, out_con)
+        return self.Cell(cell, in_con, out_con)
 
     def step_math(self, dt, J, spiked, cells, voltage):
         # 1. Add J to current c.i
