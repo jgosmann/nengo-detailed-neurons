@@ -1,6 +1,7 @@
 """Provides some basic Neuron neuron models."""
 
 from collections import namedtuple
+from weakref import WeakKeyDictionary
 
 # FIXME using non-public Nengo API
 from nengo.neurons import _LIFBase, NeuronType
@@ -26,6 +27,7 @@ class NrnNeuron(NeuronType):
 
 class IntFire1(_LIFBase, NeuronType):
     Cell = namedtuple('Cell', ['neuron', 'in_con', 'out_con'])
+    overshoots = {}  # FIXME should use weak references
 
     def create(self):
         cell = neuron.h.IntFire1()
@@ -37,11 +39,17 @@ class IntFire1(_LIFBase, NeuronType):
 
     def step_math(self, dt, J, spiked, cells, voltage):
         # 1. Add J to current c.i
-        for j, (c, in_con, _) in zip(J, cells):
+        dV = (dt / self.tau_rc) * J
+        for change, j, (c, in_con, _) in zip(dV, J, cells):
             if c.m <= 1.0:
-                dV = (dt / self.tau_rc) * j
-                in_con.weight[0] = max(dV, -c.m)
+                if c in self.overshoots:
+                    change += self.overshoots[c] * j / self.tau_rc
+                    del self.overshoots[c]
+                in_con.weight[0] = max(change, -c.m)
                 in_con.event(neuron.h.t + _nrn_duration(dt) / 2.0)
+            overshoot = c.m + change - 1.0
+            if overshoot > 0.0:
+                self.overshoots[c] = dt * (overshoot / change)
         # 2. Setup recording of spikes
         spikes = [neuron.h.Vector() for c in cells]
         for (_, _, con), s in zip(cells, spikes):
@@ -50,7 +58,7 @@ class IntFire1(_LIFBase, NeuronType):
         neuron.run(neuron.h.t + _nrn_duration(dt))
         # 4. check for spikes
         spiked[:] = [s.size() > 0 for s in spikes]
-        voltage[:] = [min(c.m, 1.0) for (c, _, _) in cells]
+        voltage[:] = [min(max(c.M(), 0), 1) for (c, _, _) in cells]
 
 
 # FIXME: Deriving from _LIFBase for now to have some default implementation
