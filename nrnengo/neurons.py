@@ -1,7 +1,6 @@
 """Provides some basic Neuron neuron models."""
 
 from collections import namedtuple
-from weakref import WeakKeyDictionary
 
 # FIXME using non-public Nengo API
 from nengo.neurons import _LIFBase, NeuronType
