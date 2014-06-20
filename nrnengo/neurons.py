@@ -90,7 +90,7 @@ class IntFire1(_LIFBase, NrnNeuron):
 # for bias, gain, and tuning curve calculation. Obviously, this does not match
 # the neuron implemented here.
 class Bahr2(Compartmental):
-    Cell = namedtuple('Cell', ['neuron', 'out_con'])
+    Cell = namedtuple('Cell', ['neuron', 'out_con', 'bias'])
     # FIXME hard coded path
     rate_table = np.load(
         '/home/jgosmann/Documents/projects/summerschool2014/neuron-models/'
@@ -105,8 +105,11 @@ class Bahr2(Compartmental):
 
     def create(self):
         cell = neuron.h.Bahr2()
+        bias = neuron.h.IClamp(cell.soma(0.5))
+        bias.delay = 0
+        bias.dur = 1e9  # FIXME limits simulation time
         out_con = neuron.h.APCount(cell.soma(0.5))
-        return self.Cell(neuron=cell, out_con=out_con)
+        return self.Cell(neuron=cell, out_con=out_con, bias=bias)
 
     def rates_from_current(self, J):
         return np.interp(

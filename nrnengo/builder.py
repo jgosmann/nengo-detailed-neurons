@@ -1,9 +1,9 @@
 from weakref import WeakKeyDictionary
 
 import nengo
-from nengo.builder import build_connection, build_linear_system, \
-    full_transform, Builder, Operator, Signal
-from nengo.objects import Connection
+from nengo.builder import build_connection, build_ensemble, \
+    build_linear_system, full_transform, Builder, Operator, Signal
+from nengo.objects import Connection, Ensemble
 from nengo.utils.compat import is_number
 import neuron
 import numpy as np
@@ -75,6 +75,12 @@ class NrnBuilders(object):
         self.ens_to_cells[ens] = op.cells
         model.add_op(op)
 
+    def build_ensemble(self, ens, model, config):
+        build_ensemble(ens, model, config)
+        if isinstance(ens.neuron_type, Compartmental):
+            for c, b in zip(self.ens_to_cells[ens], model.params[ens].bias):
+                c.bias.amp = b
+
     def build_connection(self, conn, model, config):
         use_nrn = (
             isinstance(conn.post, nengo.objects.Ensemble) and
@@ -142,4 +148,5 @@ class NrnBuilders(object):
     def register(self):
         Builder.register_builder(self.build_nrn_neuron, IntFire1)
         Builder.register_builder(self.build_nrn_neuron, Bahr2)
+        Builder.register_builder(self.build_ensemble, Ensemble)
         Builder.register_builder(self.build_connection, Connection)
