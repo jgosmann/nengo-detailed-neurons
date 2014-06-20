@@ -136,11 +136,18 @@ class NrnBuilders(object):
             synapse = ExpSyn(synapse)
 
         # Connect
+        weights = weights * 0.001 / len(weights)
         connections = [[]] * len(weights)
         for i, cell in enumerate(self.ens_to_cells[conn.post]):
             for j, w in enumerate(weights[:, i]):
-                connections[j].append(synapse.create(
-                    cell.neuron.apical(0.5), w / 100.0))
+                if w >= 0.0:
+                    x = np.random.rand()
+                    connections[j].append(synapse.create(
+                        cell.neuron.soma(x),
+                        w * (x + 1)))
+                else:
+                    connections[j].append(synapse.create(
+                        cell.neuron.soma(0.5), w))
 
         # 3. Add operator creating events for synapses if pre neuron fired
         model.add_op(NrnTransmitSpikes(model.sig[conn]['in'], connections))
