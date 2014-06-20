@@ -31,3 +31,22 @@ class ExpSyn(NrnSynapse):
         in_con.weight[0] = abs(weight)
 
         return self.SynapticCon(syn=syn, in_con=in_con)
+
+
+class FixedCurrent(NrnSynapse):
+    SynapticCon = namedtuple('SynapticCon', ['syn', 'in_con'])
+
+    def __init__(self, tau):
+        self.tau = tau
+        neuron.h.nrn_load_dll(
+            '/home/jgosmann/Documents/projects/summerschool2014/neuron-models/'
+            'models/x86_64/.libs/libnrnmech.so')
+
+    def create(self, sec, weight):
+        syn = neuron.h.FixedCurrent(sec)
+        syn.tau = nrn_duration(self.tau)
+
+        in_con = neuron.h.NetCon(None, syn)
+        in_con.weight[0] = weight
+
+        return self.SynapticCon(syn=syn, in_con=in_con)
