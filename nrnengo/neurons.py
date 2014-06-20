@@ -89,8 +89,12 @@ class IntFire1(_LIFBase, NrnNeuron):
 # FIXME: Deriving from _LIFBase for now to have some default implementation
 # for bias, gain, and tuning curve calculation. Obviously, this does not match
 # the neuron implemented here.
-class Bahr2(_LIFBase, Compartmental):
+class Bahr2(Compartmental):
     Cell = namedtuple('Cell', ['neuron', 'out_con'])
+    # FIXME hard coded path
+    rate_table = np.load(
+        '/home/jgosmann/Documents/projects/summerschool2014/neuron-models/'
+        'data/bahl2_response_curve.npz')
 
     def __init__(self):
         super(Bahr2, self).__init__()
@@ -103,6 +107,27 @@ class Bahr2(_LIFBase, Compartmental):
         cell = neuron.h.Bahr2()
         out_con = neuron.h.APCount(cell.soma(0.5))
         return self.Cell(neuron=cell, out_con=out_con)
+
+    def rates_from_current(self, J):
+        return np.interp(
+            J, self.rate_table['current'], self.rate_table['rate'])
+
+    def rates(self, x, gain, bias):
+        J = gain * x + bias
+        return self.rates_from_current(J)
+
+    def gain_bias(self, max_rates, intercepts):
+        intercepts = np.asarray(intercepts)
+        max_rates = np.minimum(max_rates, self.rate_table['rate'].max())
+
+        min_j = self.rate_table['current'][np.argmax(
+            self.rate_table['rate'] > 1)]
+        max_j = self.rate_table['current'][np.argmax(
+            np.atleast_2d(self.rate_table['rate']).T >= max_rates, axis=0)]
+
+        gain = (min_j - max_j) / (intercepts - 1.0)
+        bias = min_j - gain * intercepts
+        return gain, bias
 
     def step_math(self, dt, J, spiked, cells, voltage):
         # 1. Setup recording of spikes
