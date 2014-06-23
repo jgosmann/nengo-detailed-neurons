@@ -87,7 +87,7 @@ class IntFire1(_LIFBase, NrnNeuron):
 
 
 class Bahr2(Compartmental):
-    Cell = namedtuple('Cell', ['neuron', 'out_con', 'bias'])
+    Cell = namedtuple('Cell', ['neuron', 'bias', 'spikes', 'out_con'])
     # FIXME hard coded path
     rate_table = np.load(
         '/home/jgosmann/Documents/projects/summerschool2014/neuron-models/'
@@ -105,8 +105,11 @@ class Bahr2(Compartmental):
         bias = neuron.h.IClamp(cell.soma(0.5))
         bias.delay = 0
         bias.dur = 1e9  # FIXME limits simulation time
-        out_con = neuron.h.APCount(cell.soma(0.5))
-        return self.Cell(neuron=cell, out_con=out_con, bias=bias)
+        ap_counter = neuron.h.APCount(cell.soma(0.5))
+        spikes = neuron.h.Vector()
+        ap_counter.record(neuron.h.ref(spikes))
+        return self.Cell(
+            neuron=cell, bias=bias, spikes=spikes, out_con=ap_counter)
 
     def rates_from_current(self, J):
         return np.interp(
@@ -130,12 +133,12 @@ class Bahr2(Compartmental):
         return gain, bias
 
     def step_math(self, dt, J, spiked, cells, voltage):
-        # 1. Setup recording of spikes
-        spikes = self._setup_spike_recorder(cells)
+        for c in cells:
+            c.spikes.resize(0)
 
-        # 2. Simulate for one time step
+        # 1. Simulate for one time step
         neuron.run(neuron.h.t + nrn_duration(dt))
 
-        # 3. Check for spikes
-        spiked[:] = [s.size() > 0 for s in spikes]
+        # 2. Check for spikes
+        spiked[:] = [c.spikes.size() > 0 for c in cells]
         voltage[:] = [c.neuron.soma.v for c in cells]
