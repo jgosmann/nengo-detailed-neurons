@@ -136,14 +136,14 @@ class NrnBuilders(object):
             synapse = ExpSyn(synapse)
 
         # Connect
-        weights = weights * 0.001 / len(weights)
-        connections = [[]] * len(weights)
+        weights = weights * synapse.tau
+        connections = [[] for i in range(len(weights))]
         for i, cell in enumerate(self.ens_to_cells[conn.post]):
             for j, w in enumerate(weights[:, i]):
                 if w >= 0.0:
                     x = np.random.rand()
                     connections[j].append(synapse.create(
-                        cell.neuron.soma(x),
+                        cell.neuron.apical(0.5),
                         w * (x + 1)))
                 else:
                     connections[j].append(synapse.create(
