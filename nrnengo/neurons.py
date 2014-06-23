@@ -86,9 +86,6 @@ class IntFire1(_LIFBase, NrnNeuron):
                 self.tau_ref + dt) - cells[idx].spiketime
 
 
-# FIXME: Deriving from _LIFBase for now to have some default implementation
-# for bias, gain, and tuning curve calculation. Obviously, this does not match
-# the neuron implemented here.
 class Bahr2(Compartmental):
     Cell = namedtuple('Cell', ['neuron', 'out_con', 'bias'])
     # FIXME hard coded path
