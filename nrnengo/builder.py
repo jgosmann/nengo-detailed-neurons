@@ -143,7 +143,7 @@ class NrnBuilders(object):
                 if w >= 0.0:
                     x = np.random.rand()
                     connections[j].append(synapse.create(
-                        cell.neuron.apical(0.5),
+                        cell.neuron.apical(x),
                         w * (x + 1)))
                 else:
                     connections[j].append(synapse.create(
