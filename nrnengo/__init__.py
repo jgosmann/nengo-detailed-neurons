@@ -1,5 +1,6 @@
 from nrnengo.builder import NrnBuilders
 
-NrnBuilders().register()
+nrnBuilders = NrnBuilders()
+nrnBuilders.register()
 
 __all__ = ['neurons', 'synapses']
