@@ -1,9 +1,13 @@
 from weakref import WeakKeyDictionary
 
 import nengo
-from nengo.builder import build_connection, build_ensemble, \
-    build_linear_system, full_transform, Builder, Operator, Signal
-from nengo.objects import Connection, Ensemble
+import nengo.builder
+from nengo.builder.builder import Builder
+from nengo.builder.connection import build_linear_system
+from nengo.builder.operator import Operator
+from nengo.builder.signal import Signal
+from nengo import Connection, Ensemble
+from nengo.utils.builder import full_transform
 from nengo.utils.compat import is_number
 import neuron
 import numpy as np
@@ -27,7 +31,7 @@ class SimNrnPointNeurons(Operator):
         self.cells = [self.neurons.create() for i in range(len(self.J))]
         neuron.init()
 
-    def make_step(self, signals, dt):
+    def make_step(self, signals, dt, rng):
         J = signals[self.J]
         output = signals[self.output]
         voltage = signals[self.voltage]
@@ -50,7 +54,7 @@ class NrnTransmitSpikes(Operator):
 
         neuron.init()
 
-    def make_step(self, signals, dt):
+    def make_step(self, signals, dt, rng):
         spikes = signals[self.spikes]
 
         def step():
@@ -60,100 +64,97 @@ class NrnTransmitSpikes(Operator):
         return step
 
 
-class NrnBuilders(object):
-    def __init__(self):
-        self.ens_to_cells = WeakKeyDictionary()
+ens_to_cells = WeakKeyDictionary()
 
-    def build_nrn_neuron(self, nrn, ens, model, config):
-        model.sig[ens]['voltage'] = Signal(
-            np.zeros(ens.n_neurons), name="%s.voltage" % ens.label)
-        op = SimNrnPointNeurons(
-            neurons=nrn,
-            J=model.sig[ens]['neuron_in'],
-            output=model.sig[ens]['neuron_out'],
-            voltage=model.sig[ens]['voltage'])
-        self.ens_to_cells[ens] = op.cells
-        model.add_op(op)
+@Builder.register(IntFire1)
+@Builder.register(Bahr2)
+def build_nrn_neuron(model, nrn, ens):
+    model.sig[ens]['voltage'] = Signal(
+        np.zeros(ens.ensemble.n_neurons),
+        name="%s.voltage" % ens.ensemble.label)
+    op = SimNrnPointNeurons(
+        neurons=nrn,
+        J=model.sig[ens]['in'],
+        output=model.sig[ens]['out'],
+        voltage=model.sig[ens]['voltage'])
+    ens_to_cells[ens.ensemble] = op.cells
+    model.add_op(op)
 
-    def build_ensemble(self, ens, model, config):
-        build_ensemble(ens, model, config)
-        if isinstance(ens.neuron_type, Compartmental):
-            for c, b in zip(self.ens_to_cells[ens], model.params[ens].bias):
-                c.bias.amp = b
+@Builder.register(Ensemble)
+def build_ensemble(model, ens):
+    nengo.builder.build_ensemble(model, ens)
+    if isinstance(ens.neuron_type, Compartmental):
+        for c, b in zip(ens_to_cells[ens], model.params[ens].bias):
+            c.bias.amp = b
 
-    def build_connection(self, conn, model, config):
-        use_nrn = (
-            isinstance(conn.post, nengo.objects.Ensemble) and
-            isinstance(conn.post.neuron_type, Compartmental))
-        if use_nrn:
-            return self.build_nrn_connection(conn, model, config)
-        else:
-            return build_connection(conn, model, config)
+@Builder.register(Connection)
+def build_connection(model, conn):
+    use_nrn = (
+        isinstance(conn.post, nengo.Ensemble) and
+        isinstance(conn.post.neuron_type, Compartmental))
+    if use_nrn:
+        return build_nrn_connection(model, conn)
+    else:
+        return nengo.builder.build_connection(model, conn)
 
-    def build_nrn_connection(self, conn, model, config):
-        # Create random number generator
-        rng = np.random.RandomState(model.seeds[conn])
+def build_nrn_connection(model, conn):
+    # Create random number generator
+    rng = np.random.RandomState(model.seeds[conn])
 
-        # Check pre-conditions
-        assert isinstance(conn.pre, nengo.objects.Ensemble)
-        assert not isinstance(conn.pre.neuron_type, nengo.neurons.Direct)
-        # FIXME assert no rate neurons are used. How to do that?
+    # Check pre-conditions
+    assert isinstance(conn.pre, nengo.Ensemble)
+    assert not isinstance(conn.pre.neuron_type, nengo.neurons.Direct)
+    # FIXME assert no rate neurons are used. How to do that?
 
-        # Get input signal
-        if isinstance(conn.pre, nengo.objects.Neurons):
-            model.sig[conn]['in'] = model.sig[conn.pre.ensemble]['neuron_out']
-        else:
-            model.sig[conn]['in'] = model.sig[conn.pre]["out"]
+    # Get input signal
+    if isinstance(conn.pre, nengo.ensemble.Neurons):
+        model.sig[conn]['in'] = model.sig[conn.pre.ensemble]['neuron_out']
+    else:
+        model.sig[conn]['in'] = model.sig[conn.pre]["out"]
 
-        # Figure out type of connection
-        if isinstance(conn.post, nengo.objects.Neurons):
-            raise NotImplementedError()  # TODO
-        elif isinstance(conn.post.neuron_type, Compartmental):
-            pass
-        else:
-            raise AssertionError(
-                "This function should only be called if post neurons are "
-                "compartmental.")
+    # Figure out type of connection
+    if isinstance(conn.post, nengo.ensemble.Neurons):
+        raise NotImplementedError()  # TODO
+    elif isinstance(conn.post.neuron_type, Compartmental):
+        pass
+    else:
+        raise AssertionError(
+            "This function should only be called if post neurons are "
+            "compartmental.")
 
-        # Solve for weights
-        # FIXME just assuming solver is a weight solver, may that break?
-        # Default solver should probably also produce sparse solutions for
-        # performance reasons
-        eval_points, activities, targets = build_linear_system(
-            conn, model, rng=rng)
+    # Solve for weights
+    # FIXME just assuming solver is a weight solver, may that break?
+    # Default solver should probably also produce sparse solutions for
+    # performance reasons
+    eval_points, activities, targets = build_linear_system(
+        model, conn, rng=rng)
 
-        # account for transform
-        transform = full_transform(conn)
-        targets = np.dot(targets, transform.T)
+    # account for transform
+    transform = full_transform(conn)
+    targets = np.dot(targets, transform.T)
 
-        weights, solver_info = conn.solver(
-            activities, targets, rng=rng,
-            E=model.params[conn.post].scaled_encoders.T)
+    weights, solver_info = conn.solver(
+        activities, targets, rng=rng,
+        E=model.params[conn.post].scaled_encoders.T)
 
-        # Synapse type
-        synapse = conn.synapse
-        if is_number(synapse):
-            synapse = ExpSyn(synapse)
+    # Synapse type
+    synapse = conn.synapse
+    if is_number(synapse):
+        synapse = ExpSyn(synapse)
 
-        # Connect
-        weights = weights * synapse.tau
-        connections = [[] for i in range(len(weights))]
-        for i, cell in enumerate(self.ens_to_cells[conn.post]):
-            for j, w in enumerate(weights[:, i]):
-                if w >= 0.0:
-                    x = np.random.rand()
-                    connections[j].append(synapse.create(
-                        cell.neuron.apical(x),
-                        w * (x + 1)))
-                else:
-                    connections[j].append(synapse.create(
-                        cell.neuron.soma(0.5), w))
+    # Connect
+    weights = weights * synapse.tau
+    connections = [[] for i in range(len(weights))]
+    for i, cell in enumerate(ens_to_cells[conn.post]):
+        for j, w in enumerate(weights[:, i]):
+            if w >= 0.0:
+                x = np.random.rand()
+                connections[j].append(synapse.create(
+                    cell.neuron.apical(x),
+                    w * (x + 1)))
+            else:
+                connections[j].append(synapse.create(
+                    cell.neuron.soma(0.5), w))
 
-        # 3. Add operator creating events for synapses if pre neuron fired
-        model.add_op(NrnTransmitSpikes(model.sig[conn]['in'], connections))
-
-    def register(self):
-        Builder.register_builder(self.build_nrn_neuron, IntFire1)
-        Builder.register_builder(self.build_nrn_neuron, Bahr2)
-        Builder.register_builder(self.build_ensemble, Ensemble)
-        Builder.register_builder(self.build_connection, Connection)
+    # 3. Add operator creating events for synapses if pre neuron fired
+    model.add_op(NrnTransmitSpikes(model.sig[conn]['in'], connections))

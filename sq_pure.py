@@ -6,7 +6,7 @@ prefix = 'plots/sq_'
 
 import numpy as np
 import nengo
-from nengo.utils.distributions import Uniform
+from nengo.dists import Uniform
 from nrnengo.neurons import Bahr2, IntFire1
 from nrnengo.synapses import ExpSyn, FixedCurrent
 
@@ -33,7 +33,7 @@ with model:
 
     # Connect the first neuronal ensemble to the second
     # (this is the communication channel)
-    solver = nengo.decoders.LstsqL2(True)
+    solver = nengo.solvers.LstsqL2(True)
     nengo.Connection(pre, A, solver=solver, synapse=ExpSyn(0.005))
     nengo.Connection(
         A, B, solver=solver, synapse=ExpSyn(0.005), function=lambda x: x * x)
@@ -43,9 +43,9 @@ with model:
     sin_probe = nengo.Probe(sin)
     A_probe = nengo.Probe(A, synapse=.01)  # ensemble output
     B_probe = nengo.Probe(B, synapse=.01)
-    A_spikes = nengo.Probe(A, 'spikes')
-    B_spikes = nengo.Probe(B, 'spikes')
-    voltage = nengo.Probe(B, 'voltage')
+    A_spikes = nengo.Probe(A.neurons, 'spikes')
+    B_spikes = nengo.Probe(B.neurons, 'spikes')
+    voltage = nengo.Probe(B.neurons, 'voltage')
 
 
 sim = nengo.Simulator(model)

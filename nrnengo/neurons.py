@@ -4,7 +4,7 @@ from collections import namedtuple
 from weakref import WeakKeyDictionary
 
 # FIXME using non-public Nengo API
-from nengo.neurons import _LIFBase, NeuronType
+from nengo.neurons import LIFRate as _LIFBase, NeuronType
 import neuron
 import numpy as np
 import nrn
@@ -87,6 +87,7 @@ class IntFire1(_LIFBase, NrnNeuron):
 
 
 class Bahr2(Compartmental):
+    probeable = ['spikes', 'voltage']
     Cell = namedtuple('Cell', ['neuron', 'bias', 'spikes', 'out_con'])
     # FIXME hard coded path
     rate_table = np.load(
