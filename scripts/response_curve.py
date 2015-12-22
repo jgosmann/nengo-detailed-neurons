@@ -12,7 +12,7 @@ cell = neuron.h.Bahr2()
 
 iclamp = neuron.h.IClamp(cell.soma(0.5))
 iclamp.delay = 200
-iclamp.dur = 1000
+iclamp.dur = 1100
 
 v = neuron.h.Vector()
 v.record(cell.soma(0.5)._ref_v)
@@ -28,10 +28,13 @@ for i in current:
     iclamp.amp = i
     neuron.init()
     neuron.run(1500)
-    freq.append(len(spikes))
+    spike_array = np.array(spikes)
+    freq.append(np.sum(spike_array > 300))
 
 np.savez('data/bahl2_response_curve.npz', current=current, rate=freq)
 
+import matplotlib
+matplotlib.use('PDF')
 import matplotlib.pyplot as plt
 plt.plot(current, freq)
 plt.xlabel("Injected current (nA, at soma)")
