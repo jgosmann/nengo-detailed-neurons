@@ -12,8 +12,8 @@ from nengo.utils.compat import is_number
 import neuron
 import numpy as np
 
-from nrnengo.neurons import Bahr2, Compartmental, IntFire1
-from nrnengo.synapses import ExpSyn
+from nengo_detailed_neurons.neurons import Bahr2, Compartmental, IntFire1
+from nengo_detailed_neurons.synapses import ExpSyn
 
 
 class SimNrnPointNeurons(Operator):
