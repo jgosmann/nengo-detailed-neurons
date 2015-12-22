@@ -7,8 +7,8 @@ prefix = 'plots/sq_'
 import numpy as np
 import nengo
 from nengo.dists import Uniform
-from nrnengo.neurons import Bahr2, IntFire1
-from nrnengo.synapses import ExpSyn, FixedCurrent
+from nengo_detailed_neurons.neurons import Bahr2, IntFire1
+from nengo_detailed_neurons.synapses import ExpSyn, FixedCurrent
 
 # Create a 'model' object to which we can add ensembles, connections, etc.
 model = nengo.Network(label="Communications Channel", seed=3145987)

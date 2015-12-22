@@ -3,13 +3,12 @@
 from collections import namedtuple
 from weakref import WeakKeyDictionary
 
-# FIXME using non-public Nengo API
 from nengo.neurons import LIFRate as _LIFBase, NeuronType
 import neuron
 import numpy as np
 import nrn
 
-from nrnengo.util import nrn_duration
+from nengo_detailed_neurons.util import nrn_duration
 
 
 class NrnNeuron(NeuronType):

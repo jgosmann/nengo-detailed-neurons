@@ -12,14 +12,14 @@ except ImportError:
         print("Forget setuptools, trying distutils...")
         from distutils.core import setup
 
-description = ("Add capabilities to Nengo for running Neuron neuron models.")
+description = ("Enable Nengo to use neuron models simulated in NEURON.")
 
 setup(
-    name="nrnengo",
+    name="nengo_detailed_neurons",
     version="0.1",
     author="Jan Gosmann",
     author_email="jgosmann@uwaterloo.ca",
-    packages=['nrnengo'],
+    packages=['nengo_detailed_neurons'],
     scripts=[],
     description=description,
     requires=[

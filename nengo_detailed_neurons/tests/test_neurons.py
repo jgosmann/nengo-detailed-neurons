@@ -4,7 +4,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
-from nrnengo.neurons import Bahr2, IntFire1
+from nengo_detailed_neurons.neurons import Bahr2, IntFire1
 
 
 def test_int_fire1_behaves_like_nengo_lif():

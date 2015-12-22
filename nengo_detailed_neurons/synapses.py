@@ -3,7 +3,7 @@ from collections import namedtuple
 from nengo.synapses import Synapse
 import neuron
 
-from nrnengo.util import nrn_duration
+from nengo_detailed_neurons.util import nrn_duration
 
 
 class NrnSynapse(Synapse):
