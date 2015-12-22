@@ -91,14 +91,14 @@ class Bahr2(Compartmental):
     Cell = namedtuple('Cell', ['neuron', 'bias', 'spikes', 'out_con'])
     # FIXME hard coded path
     rate_table = np.load(
-        '/home/jgosmann/Documents/projects/summerschool2014/neuron-models/'
+        '/home/jgosmann/Documents/projects/nengo_detailed_neurons/'
         'data/bahl2_response_curve.npz')
 
     def __init__(self):
         super(Bahr2, self).__init__()
         # FIXME hard coded path
-        model_path = '/home/jgosmann/Documents/projects/summerschool2014/' \
-            'neuron-models/models/bahr2.hoc'
+        model_path = '/home/jgosmann/Documents/projects/' \
+            'nengo_detailed_neurons/models/bahr2.hoc'
         neuron.h.load_file(model_path)
 
     def create(self):

@@ -39,7 +39,7 @@ class FixedCurrent(NrnSynapse):
     def __init__(self, tau):
         self.tau = tau
         neuron.h.nrn_load_dll(
-            '/home/jgosmann/Documents/projects/summerschool2014/neuron-models/'
+            '/home/jgosmann/Documents/projects/nengo_detailed_neurons/'
             'models/x86_64/.libs/libnrnmech.so')
 
     def create(self, sec, weight):
