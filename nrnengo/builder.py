@@ -24,8 +24,8 @@ class SimNrnPointNeurons(Operator):
         self.voltage = voltage
 
         self.reads = [J]
-        self.updates = [output, voltage]
-        self.sets = []
+        self.sets = [output, voltage]
+        self.updates = []
         self.incs = []
 
         self.cells = [self.neurons.create() for i in range(len(self.J))]
@@ -107,8 +107,11 @@ def build_nrn_connection(model, conn):
     # FIXME assert no rate neurons are used. How to do that?
 
     # Get input signal
+    # FIXME this should probably be
+    # model.sig[conn]['in'] = model.sig[conn.pre]["out"]
+    # in both cases
     if isinstance(conn.pre, nengo.ensemble.Neurons):
-        model.sig[conn]['in'] = model.sig[conn.pre.ensemble]['neuron_out']
+        model.sig[conn]['in'] = model.sig[conn.pre.ensemble]['out']
     else:
         model.sig[conn]['in'] = model.sig[conn.pre]["out"]
 
@@ -143,7 +146,8 @@ def build_nrn_connection(model, conn):
         synapse = ExpSyn(synapse)
 
     # Connect
-    weights = weights * synapse.tau
+    # TODO: Why is this adjustment of the weights necessary?
+    weights = weights / synapse.tau / 5. * .1
     connections = [[] for i in range(len(weights))]
     for i, cell in enumerate(ens_to_cells[conn.post]):
         for j, w in enumerate(weights[:, i]):

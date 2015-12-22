@@ -77,6 +77,7 @@ class IntFire1(_LIFBase, NrnNeuron):
 
         # 5. Check for spikes and record voltages
         spiked[:] = [s.size() > 0 for s in spikes]
+        spiked /= dt
         voltage[:] = [np.clip(c.neuron.M(), 0, 1) for c in cells]
 
         # 6. Record spike times
@@ -142,4 +143,5 @@ class Bahr2(Compartmental):
 
         # 2. Check for spikes
         spiked[:] = [c.spikes.size() > 0 for c in cells]
+        spiked /= dt
         voltage[:] = [c.neuron.soma.v for c in cells]
