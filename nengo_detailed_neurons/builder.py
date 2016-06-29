@@ -82,7 +82,7 @@ def build_nrn_neuron(model, nrn, ens):
 
 @Builder.register(Ensemble)
 def build_ensemble(model, ens):
-    nengo.builder.build_ensemble(model, ens)
+    nengo.builder.ensemble.build_ensemble(model, ens)
     if isinstance(ens.neuron_type, Compartmental):
         for c, b in zip(ens_to_cells[ens], model.params[ens].bias):
             c.bias.amp = b
@@ -95,7 +95,7 @@ def build_connection(model, conn):
     if use_nrn:
         return build_nrn_connection(model, conn)
     else:
-        return nengo.builder.build_connection(model, conn)
+        return nengo.builder.connection.build_connection(model, conn)
 
 def build_nrn_connection(model, conn):
     # Create random number generator

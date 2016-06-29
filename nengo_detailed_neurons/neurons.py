@@ -87,7 +87,7 @@ class IntFire1(_LIFBase, NrnNeuron):
 
 
 class Bahr2(Compartmental):
-    probeable = ['spikes', 'voltage']
+    probeable = ('spikes', 'voltage')
     Cell = namedtuple('Cell', ['neuron', 'bias', 'spikes', 'out_con'])
     # FIXME hard coded path
     rate_table = np.load(
