@@ -28,7 +28,7 @@ class SimNrnPointNeurons(Operator):
         self.updates = []
         self.incs = []
 
-        self.cells = [self.neurons.create() for i in range(len(self.J))]
+        self.cells = [self.neurons.create() for i in range(self.J.shape[0])]
         neuron.init()
 
     def make_step(self, signals, dt, rng):
