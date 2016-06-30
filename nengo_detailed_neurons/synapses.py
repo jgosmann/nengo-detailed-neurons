@@ -15,6 +15,7 @@ class ExpSyn(NrnSynapse):
     SynapticCon = namedtuple('SynapticCon', ['syn', 'in_con'])
 
     def __init__(self, tau, e_exc=0.0, e_inh=-80.0):
+        super(ExpSyn, self).__init__()
         self.tau = tau
         self.e_exc = e_exc
         self.e_inh = e_inh
@@ -37,6 +38,7 @@ class FixedCurrent(NrnSynapse):
     SynapticCon = namedtuple('SynapticCon', ['syn', 'in_con'])
 
     def __init__(self, tau):
+        super(FixedCurrent, self).__init__()
         self.tau = tau
         neuron.h.nrn_load_dll(
             '/home/jgosmann/Documents/projects/nengo_detailed_neurons/'
