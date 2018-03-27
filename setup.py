@@ -15,7 +15,7 @@ except ImportError:
 description = ("Enable Nengo to use neuron models simulated in NEURON.")
 
 setup(
-    name="nengo_detailed_neurons",
+    name="nengo-detailed-neurons",
     version="0.1",
     author="Jan Gosmann",
     author_email="jgosmann@uwaterloo.ca",
